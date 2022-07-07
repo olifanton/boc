@@ -21,7 +21,7 @@ class BitString implements \Stringable
         $this->length = $length;
         $this->array = new Uint8Array(array_fill(
             0,
-            (int)ceil($length / 8),
+            self::getUint8ArrayLength($length),
             0
         ));
     }
@@ -59,7 +59,7 @@ class BitString implements \Stringable
     {
         $this->checkRange($n);
 
-        return ($this->array[($n / 8) | 0] & (1 << (7 - ($n % 8)))) > 0;
+        return ($this->array[(int)($n / 8) | 0] & (1 << (7 - ($n % 8)))) > 0;
     }
 
     /**
@@ -70,7 +70,7 @@ class BitString implements \Stringable
     public function on(int $n): void
     {
         $this->checkRange($n);
-        $this->array[($n / 8) | 0] |= 1 << (7 - ($n % 8));
+        $this->array[(int)($n / 8) | 0] |= 1 << (7 - ($n % 8));
     }
 
     /**
@@ -81,7 +81,7 @@ class BitString implements \Stringable
     public function off(int $n): void
     {
         $this->checkRange($n);
-        $this->array[($n / 8) | 0] &= ~(1 << (7 - ($n % 8)));
+        $this->array[(int)($n / 8) | 0] &= ~(1 << (7 - ($n % 8)));
     }
 
     /**
@@ -92,7 +92,7 @@ class BitString implements \Stringable
     public function toggle(int $n): void
     {
         $this->checkRange($n);
-        $this->array[($n / 8) | 0] ^= 1 << (7 - ($n % 8));
+        $this->array[(int)($n / 8) | 0] ^= 1 << (7 - ($n % 8));
     }
 
     /**
@@ -291,7 +291,7 @@ class BitString implements \Stringable
     {
         $result = new BitString(0);
 
-        $result->array = Bytes::arraySlice($this->array, 0, $this->length);
+        $result->array = Bytes::arraySlice($this->array, 0, self::getUint8ArrayLength($this->length));
         $result->length = $this->length;
         $result->cursor = $this->cursor;
 
@@ -308,17 +308,25 @@ class BitString implements \Stringable
 
         if ($tu > 0) {
             $tu--;
+
+            if (!$ret->getFreeBits()) {
+                $ret = self::incLength($ret, $ret->length + 1);
+            }
+
             $ret->writeBit(true);
 
             while ($tu > 0) {
                 $tu--;
+
+                if (!$ret->getFreeBits()) {
+                    $ret = self::incLength($ret, $ret->length + 1);
+                }
+
                 $ret->writeBit(false);
             }
         }
 
-        $ret->array = Bytes::arraySlice($ret->array, 0, (int)ceil($ret->cursor / 8));
-
-        return $ret->array;
+        return Bytes::arraySlice($ret->array, 0, (int)ceil($ret->cursor / 8));
     }
 
     /**
@@ -377,9 +385,18 @@ class BitString implements \Stringable
         }
 
         $temp = $this->clone();
+
+        if (!$temp->getFreeBits()) {
+            $temp = self::incLength($temp, $this->length + 1);
+        }
+
         $temp->writeBit(1);
 
         while ($temp->cursor & 4 !== 0) {
+            if (!$temp->getFreeBits()) {
+                $temp = self::incLength($temp, $this->length + 1);
+            }
+
             $temp->writeBit(0);
         }
 
@@ -416,5 +433,25 @@ class BitString implements \Stringable
         }
 
         return $str;
+    }
+
+    private static function getUint8ArrayLength(int $bitStringLength): int
+    {
+        return (int)ceil($bitStringLength / 8);
+    }
+
+    private static function incLength(BitString $bitString, int $newLength): BitString
+    {
+        if ($newLength < $bitString->length) {
+            throw new \OutOfRangeException();
+        }
+
+        $bitString = $bitString->clone();
+        $bitString->length = $newLength;
+        $tmpArr = $bitString->array;
+        $bitString->array = new Uint8Array(self::getUint8ArrayLength($newLength));
+        $bitString->array->set($tmpArr);
+
+        return $bitString;
     }
 }

@@ -6,6 +6,8 @@ use ajf\TypedArrays\Uint8Array;
 use Brick\Math\BigInteger;
 use Olifanton\Boc\BitString;
 use Olifanton\Boc\Exceptions\BitStringException;
+use Olifanton\Utils\Address;
+use Olifanton\Utils\Bytes;
 use Olifanton\Utils\Units;
 use PHPUnit\Framework\TestCase;
 
@@ -333,5 +335,92 @@ class BitStringTest extends TestCase
         $bs = new BitString(257);
         $bs->writeCoins(Units::toNano(123));
         $this->assertEquals("51CA35F0E00", $bs->toHex());
+    }
+
+    /**
+     * @throws BitStringException
+     */
+    public function testWriteAddress(): void
+    {
+        $bs = new BitString(267);
+        $bs->writeAddress(new Address("EQBvI0aFLnw2QbZgjMPCLRdtRHxhUyinQudg6sdiohIwg5jL"));
+
+        $this->assertEquals(
+            "800DE468D0A5CF86C836CC11987845A2EDA88F8C2A6514E85CEC1D58EC544246107_",
+            $bs->toHex(),
+        );
+    }
+
+    /**
+     * @throws BitStringException
+     */
+    public function testWriteEmptyAddress(): void
+    {
+        $bs = new BitString(267);
+        $bs->writeAddress(null);
+
+        $this->assertEquals("2_", $bs->toHex());
+    }
+
+    /**
+     * @throws BitStringException
+     */
+    public function testWriteBitString(): void
+    {
+        $stub = new BitString(5);
+        $stub->writeBit(0);
+        $stub->writeBit(1);
+        $stub->writeBit(0);
+        $stub->writeBit(1);
+        $stub->writeBit(0);
+
+        $bs = new BitString(256);
+        $bs->writeBitString($stub);
+        $bs->writeBitString($stub);
+
+        $this->assertEquals("52A_", $bs->toHex());
+    }
+
+    /**
+     * @throws BitStringException
+     */
+    public function testGetTopUppedArray(): void
+    {
+        $bs = new BitString(5);
+        $bs->writeBit(1);
+        $bs->writeBit(1);
+        $bs->writeBit(0);
+        $bs->writeBit(1);
+        $bs->writeBit(1);
+
+        $tua = $bs->getTopUppedArray();
+
+        $this->assertEquals("dc", Bytes::bytesToHexString($tua));
+    }
+
+    /**
+     * @throws BitStringException
+     */
+    public function testSetTopUppedArray(): void
+    {
+        $ui8 = new Uint8Array([255, 1, 0, 255, 10]);
+        $bs = new BitString(0);
+
+        $bs->setTopUppedArray($ui8);
+
+        $this->assertEquals("FF0100FF0A", (string)$bs);
+    }
+
+    /**
+     * @throws BitStringException
+     */
+    public function testSetTopUppedNonFullfilled(): void
+    {
+        $ui8 = new Uint8Array([0, 1, 0, 255, 10]);
+        $bs = new BitString(0);
+
+        $bs->setTopUppedArray($ui8, false);
+
+        $this->assertEquals("000100FF0A_", (string)$bs);
     }
 }
