@@ -12,15 +12,16 @@ use Olifanton\Utils\Bytes;
 use Olifanton\Utils\Checksum;
 use Olifanton\Utils\Crypto;
 use Olifanton\Utils\Exceptions\CryptoException;
+use function DeepCopy\deep_copy;
 
 class Cell
 {
     private BitString $bits;
 
     /**
-     * @var Cell[]
+     * @var \ArrayObject<Cell>
      */
-    private array $refs = [];
+    private \ArrayObject $refs;
 
     /**
      * @var int[]
@@ -60,6 +61,7 @@ class Cell
     public function __construct()
     {
         $this->bits = new BitString(1023);
+        $this->refs = new \ArrayObject();
     }
 
     /**
@@ -170,9 +172,9 @@ class Cell
     }
 
     /**
-     * @return Cell[]
+     * @return \ArrayObject<Cell>
      */
-    public function getRefs(): array
+    public function getRefs(): \ArrayObject
     {
         return $this->refs;
     }
@@ -226,7 +228,7 @@ class Cell
     public function toBoc(bool $has_idx = true,
                           bool $hash_crc32 = true,
                           bool $has_cache_bits = false,
-                          int $flags = 0): Uint8Array
+                          int  $flags = 0): Uint8Array
     {
         //serialized_boc#b5ee9c72 has_idx:(## 1) has_crc32c:(## 1)
         //  has_cache_bits:(## 1) flags:(## 2) { flags = 0 }
@@ -434,7 +436,7 @@ class Cell
             throw new CellException("Not enough bytes for magic prefix");
         }
 
-        $inputData = $serializedBoc;
+        $inputData = deep_copy($serializedBoc);
         $prefix = self::slice($serializedBoc, 0, 4);
         $serializedBoc = self::slice($serializedBoc, 4);
 
@@ -442,7 +444,7 @@ class Cell
 
         if (Bytes::compareBytes($prefix, BocMagicPrefix::reachBocMagicPrefix())) {
             $flags_byte = $serializedBoc[0];
-            $has_idx = $flags_byte ^ 128;
+            $has_idx = $flags_byte & 128;
             $hash_crc32 = $flags_byte & 64;
             $has_cache_bits = $flags_byte & 32;
             $flags = ($flags_byte & 16) * 2 + ($flags_byte & 8);
@@ -517,7 +519,7 @@ class Cell
 
         if ($hash_crc32) {
             if ($serializedBoc->length < 4) {
-                throw new CellException("Not enough bytes for crc32c hashsum");
+                throw new CellException("Not enough bytes for crc32c checksum");
             }
 
             $length = $inputData->length;
@@ -606,9 +608,9 @@ class Cell
         "topologicalOrderArray" => "array[]", // [0 => <string> cellHash, 1 => <Cell>]
         "indexHashmap" => "array<string, int>"
     ])]
-    private static function treeWalk(Cell $cell,
-                                     array $topologicalOrderArray,
-                                     array $indexHashmap,
+    private static function treeWalk(Cell    $cell,
+                                     array   $topologicalOrderArray,
+                                     array   $indexHashmap,
                                      ?string $parentHash = null): array
     {
         $cellHash = Bytes::arrayToBytes($cell->hash());
@@ -644,8 +646,8 @@ class Cell
     /**
      * @throws CellException
      */
-    private static function moveToEnd(array &$topologicalOrderArray,
-                                      array &$indexHashmap,
+    private static function moveToEnd(array  &$topologicalOrderArray,
+                                      array  &$indexHashmap,
                                       string $target): void
     {
         $targetIndex = $indexHashmap[$target];
