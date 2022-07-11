@@ -2,6 +2,7 @@
 
 namespace Olifanton\Boc;
 
+use ajf\TypedArrays\ArrayBuffer;
 use ajf\TypedArrays\Uint8Array;
 use Brick\Math\BigInteger;
 use Olifanton\Boc\Exceptions\BitStringException;

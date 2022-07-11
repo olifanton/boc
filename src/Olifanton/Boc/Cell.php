@@ -14,14 +14,18 @@ use Olifanton\Utils\Crypto;
 use Olifanton\Utils\Exceptions\CryptoException;
 use function DeepCopy\deep_copy;
 
+/**
+ * @property-read BitString $bits
+ * @property \ArrayObject $refs
+ */
 class Cell
 {
     private BitString $bits;
 
     /**
-     * @var \ArrayObject<Cell>
+     * @var \ArrayObject
      */
-    private \ArrayObject $refs;
+    private \ArrayObject $_refs;
 
     /**
      * @var int[]
@@ -61,7 +65,7 @@ class Cell
     public function __construct()
     {
         $this->bits = new BitString(1023);
-        $this->refs = new \ArrayObject();
+        $this->_refs = new \ArrayObject();
     }
 
     /**
@@ -75,7 +79,9 @@ class Cell
             throw new CellException("Cell writing error: " . $e->getMessage(), $e->getCode(), $e);
         }
 
-        $this->refs = array_merge($this->refs, $anotherCell->refs);
+        $this->_refs = new \ArrayObject(
+            array_merge($this->_refs->getArrayCopy(), $anotherCell->_refs->getArrayCopy())
+        );
 
         return $this;
     }
@@ -84,7 +90,7 @@ class Cell
     {
         $maxLevel = 0;
 
-        foreach ($this->refs as $ref) {
+        foreach ($this->_refs as $ref) {
             $rMaxLevel = $ref->getMaxLevel();
             $maxLevel = ($rMaxLevel > $maxLevel) ? $rMaxLevel : $maxLevel;
         }
@@ -96,9 +102,14 @@ class Cell
     {
         $maxDepth = 0;
 
-        foreach ($this->refs as $ref) {
-            $rMaxDepth = $ref->getMaxDepth();
-            $maxDepth = ($rMaxDepth > $maxDepth) ? $rMaxDepth : $maxDepth;
+        if ($this->_refs->count() > 0) {
+            foreach ($this->_refs as $ref) {
+                /** @var Cell $ref */
+                $rMaxDepth = $ref->getMaxDepth();
+                $maxDepth = ($rMaxDepth > $maxDepth) ? $rMaxDepth : $maxDepth;
+            }
+
+            $maxDepth++;
         }
 
         return $maxDepth;
@@ -107,7 +118,7 @@ class Cell
     public function getRefsDescriptor(): Uint8Array
     {
         return new Uint8Array([
-            count($this->refs) + (int)$this->isExotic * 8 + $this->getMaxLevel() * 32,
+            count($this->_refs) + (int)$this->isExotic * 8 + $this->getMaxLevel() * 32,
         ]);
     }
 
@@ -150,9 +161,14 @@ class Cell
             $this->getDataWithDescriptors(),
         ];
 
-        foreach ($this->refs as $ri => $ref) {
-            $reprArray[$ri + 1] = $ref->getMaxDepthAsArray();
-            $reprArray[$ri + 2] = $ref->hash();
+        foreach ($this->_refs as $ref) {
+            /** @var Cell $ref */
+            $reprArray[] = $ref->getMaxDepthAsArray();
+        }
+
+        foreach ($this->_refs as $ref) {
+            /** @var Cell $ref */
+            $reprArray[] = $ref->hash();
         }
 
         $x = $reprArray[0];
@@ -176,7 +192,7 @@ class Cell
      */
     public function getRefs(): \ArrayObject
     {
-        return $this->refs;
+        return $this->_refs;
     }
 
     /**
@@ -198,7 +214,7 @@ class Cell
     {
         $s = $indent . 'x{' . $this->bits->toHex() . "}\n";
 
-        foreach ($this->refs as $ref) {
+        foreach ($this->_refs as $ref) {
             $s .= $ref->print($indent . ' ');
         }
 
@@ -208,16 +224,6 @@ class Cell
     public function isExplicitlyStoredHashes(): int
     {
         return 0;
-    }
-
-    private function getMaxDepthAsArray(): Uint8Array
-    {
-        $maxDepth = $this->getMaxDepth();
-        $d = new Uint8Array([0, 0]);
-        $d[0] = (int)floor($maxDepth / 256);
-        $d[1] = $maxDepth % 256;
-
-        return $d;
     }
 
     /**
@@ -260,7 +266,7 @@ class Cell
             $sizeIndex[] = $full_size;
             /** @var Cell $cell_ */
             $cell_ = $cell_info[1];
-            $full_size = $full_size + $cell_->bocSerializationSize($cellsIndex, $s_bytes);
+            $full_size = $full_size + $cell_->bocSerializationSize($cellsIndex);
         }
 
         $offset_bits = strlen(decbin($full_size));
@@ -289,7 +295,7 @@ class Cell
             foreach ($topologicalOrder as $cell_info) {
                 /** @var Cell $cell_ */
                 $cell_ = $cell_info[1];
-                $refcell_ser = $cell_->serializeForBoc($sizeIndex, $s_bytes);
+                $refcell_ser = $cell_->serializeForBoc($cellsIndex);
                 $serialization->writeBytes($refcell_ser);
             }
 
@@ -303,6 +309,29 @@ class Cell
         } catch (BitStringException $e) {
             throw new CellException("BoC serialization error: " . $e->getMessage(), $e->getCode(), $e);
         }
+    }
+
+    public function __get(string $name)
+    {
+        if ($name === "bits") {
+            return $this->getBits();
+        }
+
+        if ($name === "refs") {
+            return $this->getRefs();
+        }
+
+        throw new \InvalidArgumentException("Unknown property \"${name}\"");
+    }
+
+    private function getMaxDepthAsArray(): Uint8Array
+    {
+        $maxDepth = $this->getMaxDepth();
+        $d = new Uint8Array([0, 0]);
+        $d[0] = (int)floor($maxDepth / 256);
+        $d[1] = $maxDepth % 256;
+
+        return $d;
     }
 
     /**
@@ -319,12 +348,12 @@ class Cell
             throw new CellException("Cell hashes explicit storing is not implemented");
         }
 
-        foreach ($this->refs as $ref) {
+        foreach ($this->_refs as $ref) {
             $refHash = $ref->hash();
             $refIndexInt = $cellsIndex[Bytes::arrayToBytes($refHash)];
             $refIndexHex = dechex($refIndexInt);
 
-            if ($refIndexHex % 2) {
+            if (strlen($refIndexHex) % 2) {
                 $refIndexHex = "0" . $refIndexHex;
             }
 
@@ -346,7 +375,7 @@ class Cell
     /**
      * @throws CellException
      */
-    private function bocSerializationSize(array $cellsIndex, int $refSize): int
+    private function bocSerializationSize(array $cellsIndex): int
     {
         return $this->serializeForBoc($cellsIndex)->length;
     }
@@ -389,14 +418,14 @@ class Cell
         for ($ci = $header["cells_num"] - 1; $ci >= 0; $ci--) {
             $c = $cells_array[$ci];
 
-            for ($ri = 0; $ri < count($c->refs); $ri++) {
+            for ($ri = 0; $ri < count($c->refs_r); $ri++) {
                 $r = $c->refs_r[$ri];
 
                 if ($r < $ci) {
                     throw new CellException("Topological order is broken");
                 }
 
-                $c->refs[$ri] = $cells_array[$r];
+                $c->_refs[$ri] = $cells_array[$r];
             }
 
             $c->refs_r = [];
@@ -618,7 +647,7 @@ class Cell
         if (isset($indexHashmap[$cellHash])) {
             if ($parentHash) {
                 if ($indexHashmap[$parentHash] > $indexHashmap[$cellHash]) {
-                    self::moveToEnd($topologicalOrderArray, $indexHashmap, $cellHash);
+                    self::moveToEnd($indexHashmap, $topologicalOrderArray, $cellHash);
                 }
             }
 
@@ -631,7 +660,7 @@ class Cell
         $indexHashmap[$cellHash] = count($topologicalOrderArray);
         $topologicalOrderArray[] = [$cellHash, $cell];
 
-        foreach ($cell->refs as $subCell) {
+        foreach ($cell->_refs as $subCell) {
             $res = self::treeWalk($subCell, $topologicalOrderArray, $indexHashmap, $cellHash);
             $topologicalOrderArray = $res["topologicalOrderArray"];
             $indexHashmap = $res["indexHashmap"];
@@ -646,8 +675,8 @@ class Cell
     /**
      * @throws CellException
      */
-    private static function moveToEnd(array  &$topologicalOrderArray,
-                                      array  &$indexHashmap,
+    private static function moveToEnd(array  &$indexHashmap,
+                                      array  &$topologicalOrderArray,
                                       string $target): void
     {
         $targetIndex = $indexHashmap[$target];
@@ -665,8 +694,8 @@ class Cell
         foreach ($data[1]->refs as $subCell) {
             /** @var Cell $subCell */
             self::moveToEnd(
-                $topologicalOrderArray,
                 $indexHashmap,
+                $topologicalOrderArray,
                 Bytes::arrayToBytes($subCell->hash()),
             );
         }
