@@ -2,7 +2,6 @@
 
 namespace Olifanton\Boc;
 
-use ajf\TypedArrays\ArrayBuffer;
 use ajf\TypedArrays\Uint8Array;
 use Brick\Math\BigInteger;
 use Olifanton\Boc\Exceptions\BitStringException;
@@ -292,7 +291,7 @@ class BitString implements \Stringable
     {
         $result = new BitString(0);
 
-        $result->array = Bytes::arraySlice($this->array, 0, self::getUint8ArrayLength($this->length));
+        $result->array = $this->getImmutableArray();
         $result->length = $this->length;
         $result->cursor = $this->cursor;
 
@@ -412,6 +411,16 @@ class BitString implements \Stringable
     public function __toString(): string
     {
         return $this->toHex();
+    }
+
+    public function getImmutableArray(): Uint8Array
+    {
+        return Bytes::arraySlice($this->array, 0, self::getUint8ArrayLength($this->length));
+    }
+
+    public function getLength(): int
+    {
+        return $this->length;
     }
 
     /**

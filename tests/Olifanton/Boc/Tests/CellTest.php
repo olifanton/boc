@@ -176,4 +176,46 @@ class CellTest extends TestCase
                 Bytes::bytesToHexString($cell0->toBoc()),
             );
     }
+
+    /**\
+     * @throws \Throwable
+     */
+    public function testBeginParse(): void
+    {
+        $cell = Cell::oneFromBoc(
+            "b5ee9c7241010301004e000263801e38d2f166688ec38fbcf35a1d0858897ef3ebcc37c528adada697b73da9be85000000000000000000000000000000001001020026405f5e1005012a05f200405f5e10043b9aca00000200444b05ea"
+        );
+        $slice = $cell->beginParse();
+
+        $addr = $slice->loadAddress();
+        $int64A = $slice->loadUint(64);
+        $int64B = $slice->loadUint(64);
+
+        $this->assertEquals(
+            "EQDxxpeLM0R2HH3nmtDoQsRL959eYb4pRW1tNL257U30KBOX",
+            $addr->toString(true, true, true),
+        );
+        $this->assertEquals("0", $int64A->toBase(10));
+        $this->assertEquals("0", $int64B->toBase(10));
+
+        $ref0 = $slice->loadRef();
+
+        $coins0_0 = $ref0->loadCoins();
+        $coins0_1 = $ref0->loadCoins();
+        $coins0_2 = $ref0->loadCoins();
+        $coins0_3 = $ref0->loadCoins();
+
+        $this->assertEquals("100000000", $coins0_0->toBase(10));
+        $this->assertEquals("5000000000", $coins0_1->toBase(10));
+        $this->assertEquals("100000000", $coins0_2->toBase(10));
+        $this->assertEquals("1000000000", $coins0_3->toBase(10));
+
+        $ref1 = $slice->loadRef();
+
+        $coins1_0 = $ref1->loadCoins();
+        $coins1_1 = $ref1->loadCoins();
+
+        $this->assertEquals("0", $coins1_0->toBase(10));
+        $this->assertEquals("0", $coins1_1->toBase(10));
+    }
 }

@@ -209,6 +209,8 @@ class Cell
 
     /**
      * Recursively prints cell's content like Fift
+     *
+     * @throws BitStringException
      */
     public function print(string $indent = ''): string
     {
@@ -309,6 +311,13 @@ class Cell
         } catch (BitStringException $e) {
             throw new CellException("BoC serialization error: " . $e->getMessage(), $e->getCode(), $e);
         }
+    }
+
+    public function beginParse(): Slice
+    {
+        $refs = array_map(fn (Cell $ref) => $ref->beginParse(), $this->refs->getArrayCopy());
+
+        return new Slice($this->bits->getImmutableArray(), $this->bits->getLength(), $refs);
     }
 
     public function __get(string $name)
