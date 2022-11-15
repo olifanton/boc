@@ -50,9 +50,9 @@ class Cell
      *
      * @throws CellException
      */
-    public static function oneFromBoc(string|Uint8Array $serializedBoc): Cell
+    public static function oneFromBoc(string|Uint8Array $serializedBoc, bool $isBase64 = false): Cell
     {
-        $cells = self::deserializeBoc($serializedBoc);
+        $cells = self::deserializeBoc($serializedBoc, $isBase64);
         $cellsCount = count($cells);
 
         if ($cellsCount !== 1) {
@@ -393,11 +393,23 @@ class Cell
      * @return Cell[]
      * @throws CellException
      */
-    private static function deserializeBoc(string|Uint8Array $serializedBoc): array
+    private static function deserializeBoc(string|Uint8Array $serializedBoc, bool $isBase64 = false): array
     {
         if (!$serializedBoc instanceof Uint8Array) {
             try {
-                $serializedBoc = Bytes::hexStringToBytes($serializedBoc);
+                if ($isBase64) {
+                    if (!self::isBase64String($serializedBoc)) {
+                        throw new CellException("\$serializedBoc must to be valid base64 string");
+                    }
+
+                    $serializedBoc = Bytes::base64ToBytes($serializedBoc);
+                } else {
+                    if (!self::isHexString($serializedBoc)) {
+                        throw new CellException("\$serializedBoc must to be valid hex string");
+                    }
+
+                    $serializedBoc = Bytes::hexStringToBytes($serializedBoc);
+                }
             } catch (\Throwable $e) {
                 throw new CellException($e->getMessage(), $e->getCode(), $e);
             }
@@ -713,5 +725,15 @@ class Cell
     private static function slice(Uint8Array $array, int $start, ?int $end = null): Uint8Array
     {
         return ArrayHelper::sliceUint8Array($array, $start, $end);
+    }
+
+    private static function isHexString(string $hexString): bool
+    {
+        return preg_match("/^[a-f0-9]{2,}$/i", $hexString) && !(strlen($hexString) & 1);
+    }
+
+    private static function isBase64String(string $base64String): bool
+    {
+        return (bool) preg_match('/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $base64String);
     }
 }

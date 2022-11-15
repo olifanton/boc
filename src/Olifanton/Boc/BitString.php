@@ -392,7 +392,7 @@ class BitString implements \Stringable
 
         $temp->writeBit(1);
 
-        while ($temp->cursor & 4 !== 0) {
+        while ($temp->cursor % 4 !== 0) {
             if (!$temp->getFreeBits()) {
                 $temp = self::incLength($temp, $this->length + 1);
             }
