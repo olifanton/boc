@@ -69,6 +69,8 @@ class Cell
     }
 
     /**
+     * Writes another Cell to this cell and returns this cell. Mutable method.
+     *
      * @throws CellException
      */
     public function writeCell(Cell $anotherCell): self
@@ -98,6 +100,9 @@ class Cell
         return $maxLevel;
     }
 
+    /**
+     * Returns max depth of children cells.
+     */
     public function getMaxDepth(): int
     {
         $maxDepth = 0;
@@ -182,12 +187,17 @@ class Cell
         return $x;
     }
 
+    /**
+     * Returns internal BitString instance for writing and reading.
+     */
     public function getBits(): BitString
     {
         return $this->bits;
     }
 
     /**
+     * Returns Array-like object of children cells.
+     *
      * @return \ArrayObject<Cell>
      */
     public function getRefs(): \ArrayObject
@@ -196,6 +206,8 @@ class Cell
     }
 
     /**
+     * Returns SHA-256 hash of this Cell.
+     *
      * @throws CellException
      */
     public function hash(): Uint8Array
@@ -208,7 +220,7 @@ class Cell
     }
 
     /**
-     * Recursively prints cell's content like Fift
+     * Recursively prints cell's content like Fift.
      *
      * @throws BitStringException
      */

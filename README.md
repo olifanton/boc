@@ -6,14 +6,17 @@ BOC (Bag of Cells) PHP serialization library
 [![Latest Stable Version](https://poser.pugx.org/olifanton/boc/v/stable)](https://packagist.org/packages/olifanton/boc)
 [![Total Downloads](https://poser.pugx.org/olifanton/boc/downloads)](https://packagist.org/packages/olifanton/boc)
 
-
 PHP port of [`tonweb-boc`](https://github.com/toncenter/tonweb/tree/master/src/boc) JS library
+
+---
 
 ## Installation
 
 ```bash
 composer require olifanton/boc
 ```
+
+---
 
 ## Documentation
 
@@ -34,6 +37,12 @@ use Olifanton\Boc\Cell;
 ```
 
 ### Library classes
+
+- [BitString](https://github.com/olifanton/boc#olifantonbocbitstring)
+- [Cell](https://github.com/olifanton/boc#olifantonboccell)
+- [Slice](https://github.com/olifanton/boc#olifantonbocslice)
+
+---
 
 #### `Olifanton\Boc\BitString`
 
@@ -220,7 +229,7 @@ Writes UTF-8 string.
  */
 public function writeCoins(int | BigInteger $amount): void;
 ```
-Writes coins in nanotoncoins. 1 TON === 1000000000 (10^9) nanotoncoins
+Writes coins in nanotoncoins. 1 TON === 1000000000 (10^9) nanotoncoins.
 
 
 ###### writeAddress(): void
@@ -230,7 +239,7 @@ Writes coins in nanotoncoins. 1 TON === 1000000000 (10^9) nanotoncoins
  */
 public function writeAddress(?Address $address): void
 ```
-Writes TON address. See Address implementation in [olifanton/utils](http://github.com/olifanton/utils) package
+Writes TON address. See Address implementation in [olifanton/utils](http://github.com/olifanton/utils) package.
 
 
 ###### writeBitString(): void
@@ -244,7 +253,7 @@ Writes another BitString to this BitString.
 
 
 ###### clone(): BitString
-Clones this BitString and return new BitString instance.
+Clones this BitString and returns new BitString instance.
 
 
 ###### toHex(): string
@@ -256,21 +265,106 @@ Returns immutable copy of internal Uint8Array.
 
 
 ###### getLength(): int
-Returns size of BitString in bits
+Returns size of BitString in bits.
+
+---
 
 #### `Olifanton\Boc\Cell`
 
-`@TODO`
+`Cell` is a class that implements the concept of [TVM Cells](https://ton.org/docs/learn/overviews/Cells) in PHP. To create new and process received messages from the blockchain, you will work with instances of the Cell class. 
+
+
+##### _Cell_ constructor
+Without parameters.
+
+
+##### _Cell_ methods
+
+
+###### fromBoc(): Array\<Cell\>
+```php
+/**
+ * @param string|Uint8Array $serializedBoc Serialized BoC
+ * @return Cell[]
+ */
+public static function fromBoc(string|Uint8Array $serializedBoc): array
+```
+Creates array of Cell's from byte array or hex string.
+
+
+###### oneFromBoc(): Cell
+```php
+/**
+ * @param string|Uint8Array $serializedBoc Serialized BoC
+ * @param bool $isBase64 Base64-serialized flag, default false
+ */
+public static function oneFromBoc(string|Uint8Array $serializedBoc, bool $isBase64 = false): Cell
+```
+Fetch one root Cell from byte array or hex string.
+
+
+###### writeCell(): void
+```php
+/**
+ * @param Cell $anotherCell Another cell
+ * @return Cell This Cell
+ */
+public function writeCell(Cell $anotherCell): self
+```
+Writes another Cell to this cell and returns this cell. Mutable method.
+
+
+###### getMaxDepth(): int
+Returns max depth of child cells.
+
+
+###### getBits(): BitString
+Returns internal BitString instance for writing and reading.
+
+
+###### getRefs(): ArrayObject\<Cell\>
+Returns Array-like object of children cells.
+
+
+###### hash(): Uint8Array
+Returns SHA-256 hash of this Cell.
+
+
+###### print(): string
+Recursively prints cell's content like Fift.
+
+
+###### toBoc(): Uint8Array
+```php
+/**
+ * @param bool $has_idx Default _true_
+ * @param bool $hash_crc32 Default _true_
+ * @param bool $has_cache_bits Default _false_
+ * @param int $flags Default _0_
+ */
+public function toBoc(bool $has_idx = true,
+                      bool $hash_crc32 = true,
+                      bool $has_cache_bits = false,
+                      int  $flags = 0): Uint8Array
+```
+Creates BoC Byte array.
+
+
+---
 
 #### `Olifanton\Boc\Slice`
 
 `@TODO`
+
+---
 
 ## Tests
 
 ```bash
 composer run test
 ```
+
+---
 
 # License
 
