@@ -51,7 +51,7 @@ class BitString implements \Stringable
     }
 
     /**
-     * Get bit value value at `$n` position
+     * Get a bit value at `$n` position
      *
      * @throws BitStringException
      */
@@ -413,11 +413,17 @@ class BitString implements \Stringable
         return $this->toHex();
     }
 
+    /**
+     * Returns immutable copy of internal Uint8Array
+     */
     public function getImmutableArray(): Uint8Array
     {
         return Bytes::arraySlice($this->array, 0, self::getUint8ArrayLength($this->length));
     }
 
+    /**
+     * Returns size of BitString in bits
+     */
     public function getLength(): int
     {
         return $this->length;
