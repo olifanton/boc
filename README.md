@@ -8,15 +8,11 @@ BOC (Bag of Cells) PHP serialization library
 
 PHP port of [`tonweb-boc`](https://github.com/toncenter/tonweb/tree/master/src/boc) JS library
 
----
-
 ## Installation
 
 ```bash
 composer require olifanton/boc
 ```
-
----
 
 ## Documentation
 
@@ -62,7 +58,7 @@ public function __construct(int $length)
 
 Parameters:
 
-- `$length` &mdash; length Uint8Array. Default value for TVM Cell: _1023_ ([Documentation](https://ton.org/docs/learn/overviews/Cells))
+- `$length` &mdash; length of Uint8Array. Default value for TVM Cell: _1023_ ([Documentation](https://ton.org/docs/learn/overviews/Cells))
 
 ##### _BitString_ methods
 
@@ -354,7 +350,88 @@ Creates BoC Byte array.
 
 #### `Olifanton\Boc\Slice`
 
-`@TODO`
+`Slice` is the type of cell slices. A cell can be transformed into a slice, and then the data bits and references to other cells from the cell can be obtained by loading them from the slice.
+
+`load%` (loadBit, loadUint, ...) methods move the Slice internal cursor. If you try to read a value that exceeds the length of the free bits, `SliceException` exception will be thrown.
+
+##### _Slice_ constructor
+
+```php
+/**
+ * @param \ajf\TypedArrays\Uint8Array $array
+ * @param int $length
+ * @param \Olifanton\Boc\Slice[] $refs
+ */
+public function __construct(Uint8Array $array, int $length, array $refs)
+```
+
+Parameters:
+
+- `$array` &mdash; Uint8Array from BitString representation of Cell 
+- `$length` &mdash; BitString length
+- `$refs` &mdash; Children Cells slices
+
+##### _Slice_ methods
+
+###### getFreeBits(): int
+Returns the unread bits according to the internal cursor.
+
+###### get(): bool
+```php
+/**
+ * @param int $n
+ */
+public function get(int $n): bool
+```
+Returns a bit value at position `$n`.
+
+###### loadBit(): bool
+Reads a bit and moves the cursor.
+
+###### loadBits(): Uint8Array
+```php
+/**
+ * @param int $bitLength
+ */
+public function loadBits(int $bitLength): Uint8Array
+```
+Reads bit array.
+
+###### loadUint(): BigInteger
+```php
+/**
+ * @param int $bitLength
+ */
+public function loadUint(int $bitLength): BigInteger
+```
+Reads unsigned integer.
+
+###### loadInt(): BigInteger
+```php
+/**
+ * @param int $bitLength
+ */
+public function loadInt(int $bitLength): BigInteger
+```
+Reads signed integer.
+
+###### loadVarUint(): BigInteger
+```php
+/**
+ * @param int $bitLength
+ */
+public function loadVarUint(int $bitLength): BigInteger
+```
+
+
+###### loadCoins(): BigInteger
+Reads TON amount in nanotoncoins.
+
+###### loadAddress(): ?Address
+Reads Address.
+
+###### loadRef(): Slice
+Reads Slice of children Cell.
 
 ---
 
