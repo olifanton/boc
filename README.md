@@ -428,7 +428,7 @@ public function loadVarUint(int $bitLength): BigInteger
 Reads TON amount in nanotoncoins.
 
 ###### loadAddress(): ?Address
-Reads Address.
+Reads [Address](https://github.com/olifanton/utils#olifantonutilsaddress).
 
 ###### loadRef(): Slice
 Reads Slice of children Cell.
