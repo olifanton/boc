@@ -32,7 +32,7 @@
   "minimum-stability": "dev",
   "require": {
     "php": ">=8.1",
-    "olifanton/utils": "^0.3",
+    "olifanton/utils": "^0.4",
     "myclabs/deep-copy": "^1.11"
   },
   "require-dev": {
