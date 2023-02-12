@@ -1,3 +1,7 @@
+---
+# ⚠️⚠️⚠️ This package is outdated and will not be updated! Use [`olifanton/interop`](https://github.com/olifanton/interop) instead.
+---
+
 BOC (Bag of Cells) PHP serialization library
 ---
 
